@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Contacto - Préstamos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="background-pattern"></div>
+    <div class="container">
+        <div class="form-container">
+            <div class="header">
+                <div class="logo">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <h1>Solicitud de Préstamo</h1>
+                <p class="subtitle">Complete sus datos para conectar con nuestras empresas de préstamos asociadas</p>
+            </div>
+            
+            <form id="contactForm" novalidate>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">
+                            <i class="fas fa-user"></i>
+                            Nombre Completo
+                        </label>
+                        <input type="text" id="fullName" name="fullName" placeholder="Ingrese su nombre completo" required>
+                        <span class="error-message">Por favor ingrese su nombre completo</span>
+                        <span class="success-icon"><i class="fas fa-check"></i></span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="age">
+                            <i class="fas fa-calendar-alt"></i>
+                            Edad
+                        </label>
+                        <input type="number" id="age" name="age" min="18" max="120" placeholder="Ingrese su edad" required>
+                        <span class="error-message">Debe ser mayor de 18 años</span>
+                        <span class="success-icon"><i class="fas fa-check"></i></span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="country">
+                            <i class="fas fa-globe-americas"></i>
+                            País de Residencia
+                        </label>
+                        <div class="select-wrapper">
+                            <select id="country" name="country" required>
+                                <option value="">Seleccione su país</option>
+                                <option value="nicaragua">🇳🇮 Nicaragua</option>
+                                <option value="honduras">🇭🇳 Honduras</option>
+                                <option value="guatemala">🇬🇹 Guatemala</option>
+                            </select>
+                            <i class="fas fa-chevron-down select-arrow"></i>
+                        </div>
+                        <span class="error-message">Por favor seleccione su país</span>
+                        <span class="success-icon"><i class="fas fa-check"></i></span>
+                    </div>
+                </div>
+
+                <div class="form-row" id="companyGroup" style="display: none;">
+                    <div class="form-group">
+                        <label for="company">
+                            <i class="fas fa-building"></i>
+                            Empresa de Préstamos
+                        </label>
+                        <div class="company-selection-message">
+                            <i class="fas fa-star"></i>
+                            <p><strong>¡Atención Especial Garantizada!</strong></p>
+                            <p>Selecciona la empresa que viste en nuestra publicidad para recibir atención personalizada</p>
+                        </div>
+                        <div class="companies-grid" id="companiesGrid">
+                            <!-- Las empresas se cargarán dinámicamente aquí -->
+                        </div>
+                        <span class="error-message">Por favor seleccione una empresa</span>
+                        <span class="success-icon"><i class="fas fa-check"></i></span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="submitBtn" disabled>
+                        <i class="fab fa-whatsapp"></i>
+                        <span>Contactar por WhatsApp</span>
+                        <div class="button-loader"></div>
+                    </button>
+                </div>
+            </form>
+
+            <div class="footer">
+                <p><i class="fas fa-shield-alt"></i> Sus datos están protegidos y seguros</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos de las compañías de préstamos por país
+        const companiesData = {
+            nicaragua: [
+                { name: "Confianza Financiera Nicaragua", phone: "50586512124", logo: "./logo/4.jpeg", id: "nic1" }
+            ],
+            honduras: [
+                { name: "Impulso Financiero de Honduras", phone: "50487618423", logo: "./logo/6.jpeg", id: "hon1" },
+                { name: "Banca Confiable Honduras", phone: "50493683235", logo: "./logo/3.jpeg", id: "hon2" },
+                { name: "Credifinancial", phone: "50489431324", logo: "./logo/2.jpeg", id: "hon3" },
+                { name: "FINACTIVA", phone: "50433279182", logo: "./logo/7.jpeg", id: "hon4" },
+                { name: "FinanciaPlus", phone: "50497116418", logo: "./logo/1.jpeg", id: "hon5" }
+            ],
+            guatemala: [
+                { name: "Préstamos Eficaz Guatemala", phone: "50241119854", logo: "./logo/5.jpeg", id: "gua1" }
+            ]
+        };
+
+        const countrySelect = document.getElementById('country');
+        const companiesGrid = document.getElementById('companiesGrid');
+        const companyGroup = document.getElementById('companyGroup');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('contactForm');
+        let selectedCompany = null;
+
+        // Función para verificar si una imagen existe
+        function imageExists(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    console.log(`✅ Logo cargado: ${url}`);
+                    resolve(true);
+                };
+                img.onerror = () => {
+                    console.log(`❌ Error logo: ${url}`);
+                    resolve(false);
+                };
+                img.src = url;
+            });
+        }
+
+        // Validación en tiempo real
+        function validateField(field) {
+            const formGroup = field.closest('.form-group');
+            const errorMessage = formGroup.querySelector('.error-message');
+            const successIcon = formGroup.querySelector('.success-icon');
+            
+            let isValid = false;
+            
+            if (field.type === 'text') {
+                isValid = field.value.trim().length >= 2;
+            } else if (field.type === 'number') {
+                isValid = field.value >= 18 && field.value <= 120;
+            } else if (field.type === 'select-one') {
+                isValid = field.value !== '';
+            }
+            
+            if (isValid) {
+                formGroup.classList.remove('error');
+                formGroup.classList.add('success');
+                errorMessage.style.display = 'none';
+                successIcon.style.display = 'block';
+            } else if (field.value !== '' || field.type === 'select-one') {
+                formGroup.classList.remove('success');
+                formGroup.classList.add('error');
+                errorMessage.style.display = 'block';
+                successIcon.style.display = 'none';
+            } else {
+                formGroup.classList.remove('error', 'success');
+                errorMessage.style.display = 'none';
+                successIcon.style.display = 'none';
+            }
+            
+            return isValid;
+        }
+
+        // Event listeners para validación
+        document.getElementById('fullName').addEventListener('input', function() {
+            validateField(this);
+            checkFormValidity();
+        });
+
+        document.getElementById('age').addEventListener('input', function() {
+            validateField(this);
+            checkFormValidity();
+        });
+
+        countrySelect.addEventListener('change', async function() {
+            console.log('🌍 País seleccionado:', this.value);
+            validateField(this);
+            const selectedCountry = this.value;
+            
+            if (selectedCountry) {
+                // Limpiar selección anterior
+                selectedCompany = null;
+                companiesGrid.innerHTML = '';
+                
+                // Agregar compañías del país seleccionado
+                const companies = companiesData[selectedCountry];
+                console.log('🏢 Empresas encontradas:', companies.length);
+                
+                for (const company of companies) {
+                    console.log('🔄 Procesando:', company.name);
+                    
+                    const companyCard = document.createElement('div');
+                    companyCard.className = 'company-card';
+                    companyCard.dataset.companyId = company.id;
+                    companyCard.dataset.phone = company.phone;
+                    companyCard.dataset.name = company.name;
+                    
+                    // Verificar si la imagen existe
+                    const logoExists = await imageExists(company.logo);
+                    
+                    companyCard.innerHTML = `
+                        <div class="company-logo">
+                            ${logoExists ? 
+                                `<img src="${company.logo}" alt="${company.name}" loading="lazy">` :
+                                `<div class="logo-fallback">
+                                    <i class="fas fa-building"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="company-info">
+                            <h3>${company.name}</h3>
+                            <span class="phone-number">📱 +${company.phone}</span>
+                        </div>
+                        <div class="company-check">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    `;
+                    
+                    companyCard.addEventListener('click', function() {
+                        // Remover selección anterior
+                        document.querySelectorAll('.company-card').forEach(card => {
+                            card.classList.remove('selected');
+                        });
+                        
+                        // Seleccionar nueva empresa
+                        this.classList.add('selected');
+                        selectedCompany = {
+                            id: this.dataset.companyId,
+                            name: this.dataset.name,
+                            phone: this.dataset.phone
+                        };
+                        
+                        console.log('✅ Empresa seleccionada:', selectedCompany.name);
+                        
+                        // Validar grupo de empresas
+                        const formGroup = companiesGrid.closest('.form-group');
+                        formGroup.classList.remove('error');
+                        formGroup.classList.add('success');
+                        formGroup.querySelector('.error-message').style.display = 'none';
+                        formGroup.querySelector('.success-icon').style.display = 'block';
+                        
+                        checkFormValidity();
+                    });
+                    
+                    companiesGrid.appendChild(companyCard);
+                    console.log('✅ Tarjeta agregada:', company.name);
+                }
+                
+                companyGroup.style.display = 'block';
+                companyGroup.classList.add('slide-down');
+                console.log('🎯 Mostrando empresas para:', selectedCountry);
+            } else {
+                companyGroup.style.display = 'none';
+                selectedCompany = null;
+                companiesGrid.innerHTML = '';
+            }
+            
+            checkFormValidity();
+        });
+
+        function checkFormValidity() {
+            const fullName = document.getElementById('fullName').value.trim();
+            const age = document.getElementById('age').value;
+            const country = countrySelect.value;
+            
+            const isFormValid = fullName.length >= 2 && 
+                              age >= 18 && age <= 120 && 
+                              country !== '' && 
+                              selectedCompany !== null;
+            
+            submitBtn.disabled = !isFormValid;
+        }
+
+        // Envío del formulario
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!selectedCompany) return;
+            
+            // Mostrar loader
+            submitBtn.classList.add('loading');
+            
+            setTimeout(() => {
+                const fullName = document.getElementById('fullName').value.trim();
+                const age = document.getElementById('age').value;
+                const country = countrySelect.options[countrySelect.selectedIndex].text;
+
+                // Crear mensaje para WhatsApp
+                const message = `¡Hola! 👋
+
+Mi nombre es *${fullName}*, tengo ${age} años y resido en ${country}.
+
+Estoy interesado/a en obtener información sobre los servicios de préstamos que ofrece ${selectedCompany.name}.
+
+¿Podrían proporcionarme detalles sobre:
+• Montos disponibles 💰
+• Tasas de interés 📊
+• Requisitos necesarios 📋
+• Plazos de pago 📅
+
+¡Gracias por su atención y espero su pronta respuesta!`;
+                
+                // Crear URL de WhatsApp
+                const whatsappURL = `https://wa.me/${selectedCompany.phone}?text=${encodeURIComponent(message)}`;
+                
+                // Abrir WhatsApp
+                window.open(whatsappURL, '_blank');
+                
+                // Quitar loader
+                submitBtn.classList.remove('loading');
+                
+                // Mostrar mensaje de éxito
+                showSuccessMessage();
+            }, 1500);
+        });
+
+        function showSuccessMessage() {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-notification';
+            successDiv.innerHTML = `
+                <i class="fas fa-check-circle"></i>
+                <span>¡Redirigiendo a WhatsApp!</span>
+            `;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
+        // Debug inicial
+        console.log('🔍 DIAGNÓSTICO INICIAL:');
+        console.log('Empresas cargadas:', Object.keys(companiesData).length, 'países');
+        Object.keys(companiesData).forEach(country => {
+            console.log(`${country}: ${companiesData[country].length} empresas`);
+        });
+    </script>
+</body>
+</html>
